@@ -8,10 +8,12 @@
 #include "sensor_manager.h"
 #include "transmission_controller.h"
 
+
 // =====================================================
 // APECP - UNIFIED 3-NODE MAIN
 // SAME CODE IS UPLOADED TO ALL THREE ESP32s
 // =====================================================
+
 
 // =====================================================
 // NODE MAC ADDRESSES
@@ -23,8 +25,9 @@ const char* PIR_MAC = "B0:CB:D8:E8:FB:10";
 // LDR
 const char* LDR_MAC = "A4:F0:0F:6F:9C:B8";
 
-// DHT22
+// DHT11
 const char* DHT_MAC = "48:9D:31:2F:9B:0C";
+
 
 // =====================================================
 // SENSOR PINS
@@ -34,12 +37,14 @@ const char* DHT_MAC = "48:9D:31:2F:9B:0C";
 #define LDR_PIN 34
 #define DHT_PIN 5
 
+
 // =====================================================
 // TIMING
 // =====================================================
 
 #define SENSOR_INTERVAL 2000UL
 #define DEBUG_INTERVAL 5000UL
+
 
 // =====================================================
 // NODE CONFIGURATION
@@ -53,6 +58,7 @@ uint8_t SENSOR_PIN = 0;
 
 const char* SENSOR_NAME = "UNKNOWN";
 
+
 // =====================================================
 // APECP OBJECTS
 // =====================================================
@@ -62,6 +68,7 @@ ESPNowManager espNowManager;
 SensorManager sensorManager;
 TransmissionController transmissionController;
 
+
 // =====================================================
 // TIMERS
 // =====================================================
@@ -69,12 +76,14 @@ TransmissionController transmissionController;
 unsigned long lastSensorRead = 0;
 unsigned long lastDebug = 0;
 
+
 // =====================================================
 // TRANSMISSION INFORMATION
 // =====================================================
 
 uint32_t transmissionCount = 0;
 uint16_t sequenceNumber = 0;
+
 
 // =====================================================
 // IDENTIFY NODE FROM MAC
@@ -88,6 +97,7 @@ bool identifyNode() {
 
     Serial.print("Detected MAC: ");
     Serial.println(mac);
+
 
     // -------------------------------------------------
     // NODE 1 - PIR
@@ -106,6 +116,7 @@ bool identifyNode() {
         return true;
     }
 
+
     // -------------------------------------------------
     // NODE 2 - LDR
     // -------------------------------------------------
@@ -123,22 +134,24 @@ bool identifyNode() {
         return true;
     }
 
+
     // -------------------------------------------------
-    // NODE 3 - DHT22
+    // NODE 3 - DHT11
     // -------------------------------------------------
 
     if (mac == DHT_MAC) {
 
         NODE_ID = 3;
 
-        sensorType = SENSOR_DHT22;
+        sensorType = SENSOR_DHT11;
 
         SENSOR_PIN = DHT_PIN;
 
-        SENSOR_NAME = "DHT22";
+        SENSOR_NAME = "DHT11";
 
         return true;
     }
+
 
     // -------------------------------------------------
     // UNKNOWN NODE
@@ -146,6 +159,7 @@ bool identifyNode() {
 
     return false;
 }
+
 
 // =====================================================
 // APECP TRANSMISSION
@@ -168,6 +182,7 @@ void performAPECPTransmission(
     bool delayed = false;
     bool suppressed = false;
 
+
     // -------------------------------------------------
     // NORMAL TRANSMISSION
     // -------------------------------------------------
@@ -176,6 +191,7 @@ void performAPECPTransmission(
 
         transmittedValue = rawValue;
     }
+
 
     // -------------------------------------------------
     // GENERALIZATION
@@ -189,19 +205,25 @@ void performAPECPTransmission(
         generalized = true;
     }
 
+
     // -------------------------------------------------
     // AGGREGATION
     // -------------------------------------------------
 
     else if (action == ACTION_AGGREGATE) {
 
-        transmissionController.addToAggregation(rawValue);
+        // IMPORTANT:
+        // Readings have ALREADY been added to the
+        // aggregation buffer in loop().
+        //
+        // Do NOT add rawValue again here.
 
         transmittedValue =
             transmissionController.getAggregatedValue();
 
         aggregated = true;
     }
+
 
     // -------------------------------------------------
     // DELAY
@@ -211,6 +233,7 @@ void performAPECPTransmission(
 
         delayed = true;
     }
+
 
     // -------------------------------------------------
     // SUPPRESSION
@@ -226,6 +249,7 @@ void performAPECPTransmission(
 
         return;
     }
+
 
     // -------------------------------------------------
     // CREATE PACKET
@@ -281,6 +305,7 @@ void performAPECPTransmission(
     packet.suppressed =
         suppressed;
 
+
     // -------------------------------------------------
     // SEND PACKET
     // -------------------------------------------------
@@ -302,6 +327,23 @@ void performAPECPTransmission(
 
         Serial.print("Raw Value: ");
         Serial.println(rawValue, 2);
+
+
+        // -------------------------------------------------
+        // SHOW AGGREGATION DETAILS
+        // -------------------------------------------------
+
+        if (action == ACTION_AGGREGATE) {
+
+            Serial.print("Buffer Count: ");
+            Serial.println(
+                transmissionController.getAggregationCount()
+            );
+
+            Serial.print("Aggregate Value: ");
+            Serial.println(transmittedValue, 2);
+        }
+
 
         Serial.print("Sent Value: ");
         Serial.println(transmittedValue, 2);
@@ -335,6 +377,16 @@ void performAPECPTransmission(
         );
 
         Serial.println("--------------------------------");
+
+
+        // -------------------------------------------------
+        // CLEAR AGGREGATION AFTER SUCCESSFUL SEND
+        // -------------------------------------------------
+
+        if (action == ACTION_AGGREGATE) {
+
+            transmissionController.clearAggregation();
+        }
     }
 
     else {
@@ -344,6 +396,7 @@ void performAPECPTransmission(
         );
     }
 }
+
 
 // =====================================================
 // SETUP
@@ -355,6 +408,7 @@ void setup() {
 
     delay(1000);
 
+
     // -------------------------------------------------
     // INITIAL WIFI MODE
     // -------------------------------------------------
@@ -364,6 +418,7 @@ void setup() {
     WiFi.disconnect();
 
     delay(100);
+
 
     // -------------------------------------------------
     // HEADER
@@ -376,6 +431,7 @@ void setup() {
     Serial.println("       APECP IoT PRIVACY PROTOCOL");
     Serial.println("========================================");
 
+
     // -------------------------------------------------
     // IDENTIFY BOARD
     // -------------------------------------------------
@@ -383,7 +439,9 @@ void setup() {
     if (!identifyNode()) {
 
         Serial.println();
-        Serial.println("ERROR: UNKNOWN ESP32 MAC ADDRESS!");
+        Serial.println(
+            "ERROR: UNKNOWN ESP32 MAC ADDRESS!"
+        );
 
         Serial.print("Detected MAC: ");
         Serial.println(
@@ -391,13 +449,19 @@ void setup() {
         );
 
         Serial.println();
-        Serial.println("This ESP32 is not registered.");
-        Serial.println("System halted.");
+        Serial.println(
+            "This ESP32 is not registered."
+        );
+
+        Serial.println(
+            "System halted."
+        );
 
         while (true) {
             delay(1000);
         }
     }
+
 
     // -------------------------------------------------
     // DISPLAY NODE INFORMATION
@@ -429,6 +493,7 @@ void setup() {
 
     Serial.println("--------------------------------");
 
+
     // -------------------------------------------------
     // SENSOR INITIALIZATION
     // -------------------------------------------------
@@ -438,17 +503,20 @@ void setup() {
         SENSOR_PIN
     );
 
+
     // -------------------------------------------------
     // PEC INITIALIZATION
     // -------------------------------------------------
 
     pecManager.begin();
 
+
     // -------------------------------------------------
     // TRANSMISSION INITIALIZATION
     // -------------------------------------------------
 
     transmissionController.begin();
+
 
     // -------------------------------------------------
     // ESP-NOW INITIALIZATION
@@ -463,6 +531,7 @@ void setup() {
             delay(1000);
         }
     }
+
 
     // -------------------------------------------------
     // READY
@@ -483,6 +552,7 @@ void setup() {
     Serial.println();
 }
 
+
 // =====================================================
 // LOOP
 // =====================================================
@@ -491,11 +561,13 @@ void loop() {
 
     unsigned long now = millis();
 
+
     // -------------------------------------------------
     // PEC REGENERATION
     // -------------------------------------------------
 
     pecManager.regenerate();
+
 
     // -------------------------------------------------
     // SENSOR READING
@@ -508,8 +580,10 @@ void loop() {
 
         lastSensorRead = now;
 
+
         float sensorValue =
             sensorManager.readSensor();
+
 
         // -------------------------------------------------
         // PRIVACY SENSITIVITY
@@ -520,12 +594,14 @@ void loop() {
                 sensorType
             );
 
+
         // -------------------------------------------------
         // TEMPORAL FACTOR
         // -------------------------------------------------
 
         float temporalFactor =
             PrivacyCost::getTemporalFactor();
+
 
         // -------------------------------------------------
         // FREQUENCY FACTOR
@@ -535,6 +611,7 @@ void loop() {
             PrivacyCost::getFrequencyFactor(
                 transmissionCount
             );
+
 
         // -------------------------------------------------
         // CORRELATION FACTOR
@@ -546,6 +623,7 @@ void loop() {
                 espNowManager.getNeighborPackets(),
                 espNowManager.getNeighborCount()
             );
+
 
         // -------------------------------------------------
         // CALCULATE PRIVACY COST
@@ -559,11 +637,13 @@ void loop() {
                 correlationFactor
             );
 
+
         // -------------------------------------------------
         // CONSUME PEC
         // -------------------------------------------------
 
         pecManager.consume(cost);
+
 
         // -------------------------------------------------
         // PRIVACY STATE
@@ -571,6 +651,7 @@ void loop() {
 
         PrivacyState state =
             pecManager.getState();
+
 
         // -------------------------------------------------
         // TRANSMISSION ACTION
@@ -581,34 +662,137 @@ void loop() {
                 state
             );
 
-        // -------------------------------------------------
-        // TRANSMIT
-        // -------------------------------------------------
+
+        // =================================================
+        // NORMAL / WARNING
+        // =================================================
 
         if (
-            transmissionController.shouldTransmit(
-                action
-            )
+            action == ACTION_NORMAL ||
+            action == ACTION_GENERALIZE
         ) {
 
-            performAPECPTransmission(
-                sensorValue,
-                cost,
-                sensitivity,
-                temporalFactor,
-                frequencyFactor,
-                correlationFactor,
-                action
-            );
+            if (
+                transmissionController.shouldTransmit(
+                    action
+                )
+            ) {
+
+                performAPECPTransmission(
+                    sensorValue,
+                    cost,
+                    sensitivity,
+                    temporalFactor,
+                    frequencyFactor,
+                    correlationFactor,
+                    action
+                );
+            }
         }
 
-        else {
+
+        // =================================================
+        // HIGH / AGGREGATION
+        // =================================================
+
+        else if (action == ACTION_AGGREGATE) {
+
+            // ---------------------------------------------
+            // ALWAYS ADD CURRENT READING TO BUFFER
+            // ---------------------------------------------
+
+            transmissionController.addToAggregation(
+                sensorValue
+            );
+
+
+            Serial.println();
+            Serial.println("[APECP] HIGH STATE");
+            Serial.println("[APECP] Action: AGGREGATE");
+
+            Serial.print("Raw Value: ");
+            Serial.println(sensorValue, 2);
+
+            Serial.print("Buffer Count: ");
+            Serial.println(
+                transmissionController.getAggregationCount()
+            );
+
+
+            // ---------------------------------------------
+            // CHECK WHETHER AGGREGATION IS READY
+            // ---------------------------------------------
+
+            if (
+                transmissionController.aggregationReady()
+            ) {
+
+                float aggregateValue =
+                    transmissionController.getAggregatedValue();
+
+                Serial.print("Aggregate Ready: ");
+                Serial.println(aggregateValue, 2);
+
+
+                // -----------------------------------------
+                // SEND AGGREGATED VALUE
+                // -----------------------------------------
+
+                performAPECPTransmission(
+                    sensorValue,
+                    cost,
+                    sensitivity,
+                    temporalFactor,
+                    frequencyFactor,
+                    correlationFactor,
+                    ACTION_AGGREGATE
+                );
+            }
+        }
+
+
+        // =================================================
+        // CRITICAL / SUPPRESSION
+        // =================================================
+
+        else if (action == ACTION_SUPPRESS) {
+
+            // Clear any old aggregation data when
+            // entering CRITICAL.
+            transmissionController.clearAggregation();
+
+            Serial.println();
+            Serial.println("--------------------------------");
+            Serial.println("APECP TRANSMISSION");
+            Serial.println("--------------------------------");
+
+            Serial.print("Node: ");
+            Serial.println(NODE_ID);
+
+            Serial.print("Sensor: ");
+            Serial.println(SENSOR_NAME);
+
+            Serial.print("Raw Value: ");
+            Serial.println(sensorValue, 2);
+
+            Serial.print("PEC: ");
+            Serial.println(
+                pecManager.getPEC(),
+                2
+            );
+
+            Serial.println("State: CRITICAL");
+            Serial.println("Action: SUPPRESS");
+            Serial.println("Sent Value: NONE");
 
             Serial.println(
-                "[APECP] Packet delayed"
+                "[APECP] TRANSMISSION SUPPRESSED"
             );
+
+            Serial.println("--------------------------------");
         }
     }
+
 
     // -------------------------------------------------
     // DEBUG STATUS
@@ -657,6 +841,11 @@ void loop() {
         Serial.print("Transmissions: ");
         Serial.println(
             transmissionCount
+        );
+
+        Serial.print("Aggregation Buffer Count: ");
+        Serial.println(
+            transmissionController.getAggregationCount()
         );
 
         Serial.print("Neighbors: ");
