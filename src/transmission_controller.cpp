@@ -9,10 +9,18 @@ TransmissionController::TransmissionController()
 
 void TransmissionController::begin() {
     delayedUntil = 0;
+
     aggregationBuffer = 0.0f;
+
     aggregationCount = 0;
+
     lastAggregationTime = millis();
 }
+
+
+// =====================================================
+// DETERMINE TRANSMISSION ACTION
+// =====================================================
 
 TransmissionAction TransmissionController::determineAction(
     PrivacyState state) {
@@ -35,6 +43,10 @@ TransmissionAction TransmissionController::determineAction(
     return ACTION_SUPPRESS;
 }
 
+
+// =====================================================
+// CHECK WHETHER TRANSMISSION IS ALLOWED
+// =====================================================
 
 bool TransmissionController::shouldTransmit(
     TransmissionAction action) {
@@ -62,13 +74,14 @@ bool TransmissionController::shouldTransmit(
         // -----------------------------------------
         case ACTION_AGGREGATE:
 
-            // Only transmit an aggregate after
-            // the aggregation interval has elapsed.
+            // Aggregation is transmitted only
+            // after the complete time window.
             if (aggregationCount == 0) {
                 return false;
             }
 
-            return (now - lastAggregationTime) >= AGGREGATION_INTERVAL;
+            return (now - lastAggregationTime)
+                   >= AGGREGATION_INTERVAL;
 
 
         // -----------------------------------------
@@ -89,6 +102,10 @@ bool TransmissionController::shouldTransmit(
 }
 
 
+// =====================================================
+// GENERALIZATION
+// =====================================================
+
 float TransmissionController::applyGeneralization(
     float value,
     SensorManager& sensor) {
@@ -98,12 +115,13 @@ float TransmissionController::applyGeneralization(
 
 
 // =====================================================
-// ADD ONE READING TO AGGREGATION BUFFER
+// ADD READING TO AGGREGATION BUFFER
 // =====================================================
 
 void TransmissionController::addToAggregation(float value) {
 
     aggregationBuffer += value;
+
     aggregationCount++;
 }
 
@@ -130,15 +148,16 @@ float TransmissionController::getAggregatedValue() {
 void TransmissionController::clearAggregation() {
 
     aggregationBuffer = 0.0f;
+
     aggregationCount = 0;
 
-    // Start a new aggregation window
+    // Start a fresh aggregation window
     lastAggregationTime = millis();
 }
 
 
 // =====================================================
-// NUMBER OF READINGS CURRENTLY BUFFERED
+// GET NUMBER OF BUFFERED READINGS
 // =====================================================
 
 uint16_t TransmissionController::getAggregationCount() {
@@ -148,7 +167,7 @@ uint16_t TransmissionController::getAggregationCount() {
 
 
 // =====================================================
-// AGGREGATION TIME CHECK
+// CHECK AGGREGATION WINDOW
 // =====================================================
 
 bool TransmissionController::aggregationReady() {
@@ -163,7 +182,7 @@ bool TransmissionController::aggregationReady() {
 
 
 // =====================================================
-// DELAY CHECK
+// CHECK DELAY
 // =====================================================
 
 bool TransmissionController::delayExpired() {

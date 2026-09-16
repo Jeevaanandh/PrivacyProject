@@ -1,6 +1,9 @@
 #include "pec_manager.h"
 
-PECManager::PECManager() : pec(PEC_MAX), lastUpdate(0) {}
+PECManager::PECManager()
+    : pec(PEC_MAX),
+      lastUpdate(0) {
+}
 
 void PECManager::begin() {
     pec = PEC_MAX;
@@ -9,7 +12,10 @@ void PECManager::begin() {
 
 void PECManager::consume(float privacyCost) {
     pec -= privacyCost;
-    if (pec < 0.0f) pec = 0.0f;
+
+    if (pec < 0.0f) {
+        pec = 0.0f;
+    }
 }
 
 void PECManager::regenerate() {
@@ -22,10 +28,16 @@ void PECManager::regenerate() {
 
     unsigned long elapsed = now - lastUpdate;
 
-    if (elapsed >= 1000) {
+    if (elapsed >= 1000UL) {
+
         float seconds = elapsed / 1000.0f;
+
         pec += PEC_REGENERATION_RATE * seconds;
-        if (pec > PEC_MAX) pec = PEC_MAX;
+
+        if (pec > PEC_MAX) {
+            pec = PEC_MAX;
+        }
+
         lastUpdate = now;
     }
 }
