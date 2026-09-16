@@ -10,10 +10,12 @@
 // =====================================================
 // AGGREGATION INTERVAL
 // =====================================================
-// Readings are collected for 10 seconds and then
-// their average is transmitted.
 //
-// Change this to 5000 for 5 seconds if required.
+// Readings are collected for 10 seconds.
+// After 10 seconds, their average is transmitted.
+//
+// 10000 ms = 10 seconds
+//
 // =====================================================
 
 #define AGGREGATION_INTERVAL 10000UL
@@ -23,17 +25,21 @@ class TransmissionController {
 
 private:
 
+    // Used if ACTION_DELAY is ever used
     unsigned long delayedUntil;
 
-    // Sum of all readings collected during
-    // the current aggregation window
+
+    // =================================================
+    // AGGREGATION VARIABLES
+    // =================================================
+
+    // Sum of readings in the current window
     float aggregationBuffer;
 
     // Number of readings collected
     uint16_t aggregationCount;
 
-    // Time at which the current aggregation
-    // window started
+    // Start time of current aggregation window
     unsigned long lastAggregationTime;
 
 
@@ -43,35 +49,61 @@ public:
 
     void begin();
 
-    // Decide action based on PEC state
-    TransmissionAction determineAction(PrivacyState state);
 
-    // Decide whether data should currently
-    // be transmitted
-    bool shouldTransmit(TransmissionAction action);
+    // =================================================
+    // DETERMINE ACTION
+    // =================================================
 
-    // Apply generalization
+    TransmissionAction determineAction(
+        PrivacyState state
+    );
+
+
+    // =================================================
+    // TRANSMISSION CONTROL
+    // =================================================
+
+    bool shouldTransmit(
+        TransmissionAction action
+    );
+
+
+    // =================================================
+    // GENERALIZATION
+    // =================================================
+
     float applyGeneralization(
         float value,
         SensorManager& sensor
     );
 
-    // Add one reading to aggregation buffer
-    void addToAggregation(float value);
 
-    // Return average of buffered readings
+    // =================================================
+    // AGGREGATION
+    // =================================================
+
+    // Add one sensor reading
+    void addToAggregation(
+        float value
+    );
+
+    // Calculate average of buffered readings
     float getAggregatedValue();
 
-    // Clear buffer and start new aggregation window
+    // Clear buffer and start a new window
     void clearAggregation();
 
-    // Return number of readings currently buffered
+    // Number of readings currently buffered
     uint16_t getAggregationCount();
 
-    // Check whether aggregation interval is complete
+    // Check whether 10-second window is complete
     bool aggregationReady();
 
-    // Check delay status
+
+    // =================================================
+    // DELAY
+    // =================================================
+
     bool delayExpired();
 };
 
